@@ -1,0 +1,17 @@
+{
+  "name": "claude-mem-viz",
+  "version": "0.1.0",
+  "description": "Claude Code 记忆可视化工具",
+  "main": "server.js",
+  "bin": {
+    "memory": "./server.js"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "health": "node scripts/health-report.js",
+    "validate": "node scripts/validate.js",
+    "check-links": "node scripts/check-links.js",
+    "find-orphans": "node scripts/find-orphans.js"
+  },
+  "license": "MIT"
+}

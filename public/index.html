@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>claude-mem-viz · 完全版</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 2D renderer (经典版 style) -->
+  <div id="graph-2d">
+    <div class="g2-glow"></div>
+    <div id="g2-stage">
+      <svg class="g2-svg" id="g2-svg">
+        <defs>
+          <marker id="arrow-default" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(255,255,255,0.25)"/>
+          </marker>
+          <marker id="arrow-trace" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(77,171,247,0.7)"/>
+          </marker>
+          <marker id="arrow-trace-in" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(255,169,77,0.7)"/>
+          </marker>
+        </defs>
+      </svg>
+      <div class="g2-nodes" id="g2-nodes"></div>
+    </div>
+  </div>
+
+    <div id="trace-panel">
+      <button class="tp-close" id="trace-close">✕</button>
+      <div class="tp-title">引用溯源</div>
+      <div id="trace-body"></div>
+    </div>
+  </div>
+
+  <!-- 3D renderer (Three.js) -->
+  <div id="three-container"></div>
+  <div id="heatmap-legend">
+    <div class="hl-title">Active Heatmap</div>
+    <div class="hl-row"><span class="hl-dot" style="width:10px;height:10px;background:rgba(255,255,255,0.9);box-shadow:0 0 8px rgba(255,255,255,0.6)"></span><span class="hl-label">Hot — many connections</span></div>
+    <div class="hl-row"><span class="hl-dot" style="width:6px;height:6px;background:rgba(255,255,255,0.25);box-shadow:0 0 3px rgba(255,255,255,0.1)"></span><span class="hl-label">Cold — few or none</span></div>
+  </div>
+
+  <!-- Shared UI -->
+  <div class="graph-hint" id="graph-hint">Drag to rotate · Scroll to zoom · Click a node to inspect</div>
+
+  <div class="top-bar">
+    <h1>mem‑viz</h1>
+    <span class="divider"></span>
+    <span class="badge" id="badge">-- memories</span>
+    <span class="divider"></span>
+    <input id="search-input" type="text" placeholder="Search…">
+    <span class="divider"></span>
+    <button class="view-btn active" id="btn-cards">Cards</button>
+    <button class="view-btn" id="btn-3d">3D</button>
+    <button class="view-btn" id="btn-2d">2D</button>
+    <button class="view-btn" id="btn-chart">Chart</button>
+    <button class="view-btn" id="btn-connect">Connect</button>
+    <button class="view-btn" id="btn-health">Health</button>
+    <button class="view-btn" id="btn-add" style="color:rgba(46,204,113,0.6);font-weight:bold;">+</button>
+  </div>
+
+
+  <div class="detail-overlay" id="overlay">
+    <div class="detail-card">
+      <button class="close-btn" id="close-btn">✕</button>
+      <button class="dc-edit-btn" id="dc-edit-btn" title="Edit">✎</button>
+      <button class="dc-history-btn" id="dc-history-btn" title="History">⏱</button>
+      <div class="detail-card-inner" id="detail-content"></div>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div class="context-menu" id="context-menu">
+    <div class="mi" data-action="edit-prop"><span class="ico">✎</span> Edit Properties</div>
+    <div class="mi" data-action="edit-body"><span class="ico">📝</span> Edit Content</div>
+    <div class="sep"></div>
+    <div class="mi" data-action="disconnect"><span class="ico">✂</span> Disconnect…</div>
+    <div class="sep"></div>
+    <div class="mi danger" data-action="delete"><span class="ico">✕</span> Delete Node</div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="edit-overlay" id="edit-overlay">
+    <div class="edit-card">
+      <h2 id="edit-title">Edit Properties</h2>
+      <div class="edit-field" id="edit-id-field" style="display:none;">
+        <label>ID</label>
+        <input id="edit-id" type="text">
+      </div>
+      <div class="edit-field">
+        <label>Name</label>
+        <input id="edit-name" type="text">
+      </div>
+      <div class="edit-field">
+        <label>Description</label>
+        <input id="edit-desc" type="text">
+      </div>
+      <div class="edit-field">
+        <label>Type</label>
+        <select id="edit-type">
+          <option value="concept">concept</option>
+          <option value="user">user</option>
+          <option value="feedback">feedback</option>
+          <option value="project">project</option>
+          <option value="reference">reference</option>
+        </select>
+      </div>
+      <div class="edit-actions">
+        <button class="btn-cancel" id="edit-cancel">Cancel</button>
+        <button class="btn-save" id="edit-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Body Editor Modal -->
+  <div class="edit-overlay" id="body-overlay">
+    <div class="edit-card">
+      <h2>Edit Content</h2>
+      <div class="edit-field">
+        <label>Markdown Content</label>
+        <textarea id="body-editor"></textarea>
+      </div>
+      <div class="edit-actions">
+        <button class="btn-cancel" id="body-cancel">Cancel</button>
+        <button class="btn-save" id="body-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirm -->
+  <div class="edit-overlay" id="delete-overlay">
+    <div class="edit-card" style="width:360px;text-align:center;">
+      <h2>Delete Node?</h2>
+      <p style="color:rgba(255,255,255,0.5);font-size:14px;margin-bottom:8px;" id="delete-msg">This will remove the node and its connections.</p>
+      <div class="edit-actions" style="justify-content:center;">
+        <button class="btn-cancel" id="delete-cancel">Cancel</button>
+        <button class="btn-delete" id="delete-confirm">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Backup History Overlay -->
+  <div class="edit-overlay" id="history-overlay">
+    <div class="edit-card" style="width:520px;">
+      <h2>Edit History</h2>
+      <p style="color:rgba(255,255,255,0.4);font-size:13px;margin-bottom:16px;">
+        Backups are created automatically before each edit.
+      </p>
+      <div id="history-list" style="max-height:400px;overflow-y:auto;"></div>
+      <div class="edit-actions">
+        <button class="btn-cancel" id="history-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Backups Content Overlay -->
+  <div class="edit-overlay" id="bakcontent-overlay">
+    <div class="edit-card" style="width:620px;">
+      <h2>Backup Content</h2>
+      <div id="bakcontent-body" style="max-height:65vh;overflow-y:auto;background:rgba(0,0,0,0.3);border-radius:10px;padding:16px;font-family:monospace;font-size:13px;line-height:1.5;color:rgba(255,255,255,0.7);white-space:pre-wrap;margin-bottom:16px;"></div>
+      <div class="edit-actions" id="bakcontent-actions">
+        <button class="btn-cancel" id="bakcontent-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skipped Files Overlay -->
+  <div class="edit-overlay" id="skipped-overlay">
+    <div class="edit-card" style="width:520px;">
+      <h2>Skipped Files</h2>
+      <p style="color:rgba(255,255,255,0.4);font-size:13px;margin-bottom:16px;">
+        These files were skipped because they don't have valid frontmatter (usually index files like MEMORY.md).
+      </p>
+      <div id="skipped-list" style="max-height:400px;overflow-y:auto;"></div>
+      <div class="edit-actions">
+        <button class="btn-cancel" id="skipped-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Disconnect Overlay -->
+  <div class="edit-overlay" id="disconnect-overlay">
+    <div class="edit-card" style="width:420px;">
+      <h2>Disconnect</h2>
+      <p style="color:rgba(255,255,255,0.5);font-size:14px;margin-bottom:16px;">Click a connected node to remove the connection.</p>
+      <div class="disconnect-list" id="disconnect-list"></div>
+      <div class="edit-actions">
+        <button class="btn-cancel" id="disconnect-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart Panel -->
+  <div id="chart-panel">
+    <div class="chart-grid">
+      <div class="chart-card full">
+        <h3>Overview</h3>
+        <div class="stats-grid" id="stats-grid"></div>
+      </div>
+      <div class="chart-card">
+        <h3>Type Distribution</h3>
+        <canvas id="chart-type"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Top Connected Nodes</h3>
+        <canvas id="chart-topconn"></canvas>
+      </div>
+      <div class="chart-card full">
+        <h3>Connection Flow by Type</h3>
+        <canvas id="chart-flow"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Health Panel -->
+  <div id="health-panel">
+    <div class="health-grid">
+      <div class="health-card full">
+        <h3>Health Overview</h3>
+        <div class="health-score-ring" id="health-overview"></div>
+        <div class="health-bar-wrap">
+          <div class="health-bar-label"><span>Overall</span><span id="health-overall-pct">--</span></div>
+          <div class="health-bar"><div class="health-bar-fill" id="health-overall-bar" style="width:0%"></div></div>
+        </div>
+        <div class="health-bar-wrap">
+          <div class="health-bar-label"><span>Validate</span><span id="health-val-pct">--</span></div>
+          <div class="health-bar"><div class="health-bar-fill" id="health-val-bar" style="width:0%;background:#4dabf7"></div></div>
+        </div>
+        <div class="health-bar-wrap">
+          <div class="health-bar-label"><span>Links</span><span id="health-link-pct">--</span></div>
+          <div class="health-bar"><div class="health-bar-fill" id="health-link-bar" style="width:0%;background:#69db7c"></div></div>
+        </div>
+        <div class="health-bar-wrap">
+          <div class="health-bar-label"><span>Orphans</span><span id="health-orph-pct">--</span></div>
+          <div class="health-bar"><div class="health-bar-fill" id="health-orph-bar" style="width:0%;background:#ffa94d"></div></div>
+        </div>
+      </div>
+      <div class="health-card">
+        <h3>Broken Links</h3>
+        <div id="health-broken-list"><div class="health-empty">No issues ✓</div></div>
+      </div>
+      <div class="health-card">
+        <h3>Orphans</h3>
+        <div id="health-orphans-list"><div class="health-empty">No issues ✓</div></div>
+      </div>
+      <div class="health-card full">
+        <h3>Validate Issues</h3>
+        <div id="health-val-issues"><div class="health-empty">No issues ✓</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card View -->
+  <div id="card-toolbar">
+    <div style="display:flex;align-items:center;gap:10px;pointer-events:auto">
+      <button class="cf-btn active" data-ctype="all">All</button>
+      <button class="cf-btn" data-ctype="user">User</button>
+      <button class="cf-btn" data-ctype="feedback">Feedback</button>
+      <button class="cf-btn" data-ctype="project">Project</button>
+      <button class="cf-btn" data-ctype="reference">Reference</button>
+      <span class="card-divider"></span>
+      <span class="card-count-text" id="card-count-text">-- memories</span>
+    </div>
+  </div>
+  <div id="card-view" style="display:none">
+    <div class="card-grid" id="card-grid"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
