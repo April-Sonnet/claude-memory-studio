@@ -1,4 +1,4 @@
-  <script type="module">
+
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
@@ -538,7 +538,7 @@
 
       const geo = new THREE.SphereGeometry(r, 24, 24);
       const mat = new THREE.MeshStandardMaterial({
-        color: col, emissive: col, emissiveIntensity: isCore ? 0.5 : 0.04 + t * 0.56,
+        color: col, emissive: col, emissiveIntensity: isCore ? 0.5 : 0.15 + t * 0.45,
         roughness: 0.3, metalness: isCore ? 0.2 : 0.1,
       });
       const mesh = new THREE.Mesh(geo, mat);
@@ -549,7 +549,7 @@
       const gMat = new THREE.SpriteMaterial({
         map: glowTex, color: col, transparent: true,
         blending: THREE.AdditiveBlending, depthWrite: false,
-        opacity: isCore ? 1.0 : 0.08 + t * 0.92,
+        opacity: isCore ? 1.0 : 0.20 + t * 0.80,
       });
       const glow = new THREE.Sprite(gMat);
       const glowScale = isCore ? 4 : 3 + t * 5;
@@ -999,6 +999,7 @@
       currentMode = '3d';
       deactivateViews();
       document.getElementById('btn-3d').classList.add('active');
+      cardToolbar.style.display = 'flex';
       container3d.style.display = 'block';
       document.getElementById('heatmap-legend').classList.add('visible');
       camera.position.set(20, 14, 36);
@@ -1011,6 +1012,7 @@
       currentMode = '2d';
       deactivateViews();
       document.getElementById('btn-2d').classList.add('active');
+      cardToolbar.style.display = 'flex';
       graph2d.style.display = 'block';
       g2Scale = 1; g2PanX = 0; g2PanY = 0;
       g2Stage.style.transform = '';
@@ -1021,6 +1023,7 @@
       currentMode = 'chart';
       deactivateViews();
       document.getElementById('btn-chart').classList.add('active');
+      cardToolbar.style.display = 'flex';
       chartPanel.style.display = 'block';
       renderCharts();
     });
@@ -1029,6 +1032,7 @@
       currentMode = 'health';
       deactivateViews();
       document.getElementById('btn-health').classList.add('active');
+      cardToolbar.style.display = 'flex';
       healthPanel.style.display = 'block';
       renderHealth();
     });
@@ -1513,4 +1517,4 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       labelRenderer.setSize(window.innerWidth, window.innerHeight);
     });
-  </script>
+
