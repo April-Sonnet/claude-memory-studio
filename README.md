@@ -2,20 +2,20 @@
 
 Visualize Claude Code's memory files in 3D, 2D, and more. Scans `~/.claude/projects/*/memory/*.md`, parses YAML frontmatter and `[[wiki-links]]`, then renders an interactive knowledge graph.
 
+![3D Heatmap](screenshots/06-3d-view.jpeg)
+*3D view — nodes glow brighter with more connections*
+
+![Cards View](screenshots/05-card-view.jpeg)
+*Card view — default interface, all memory files in a clean grid*
+
+![2D Trace](screenshots/04-2d-view.jpeg)
+*2D view — directed arrows show citation directions, drag to rearrange*
+
 ![Charts](screenshots/01-charts-view.jpeg)
 *Charts — type distribution, connection stats, word cloud*
 
 ![Health Panel](screenshots/02-health-panel.jpeg)
 *Health panel — real-time data quality scores, broken links, and orphans*
-
-![2D Trace](screenshots/04-2d-view.jpeg)
-*2D view — directed arrows show citation directions, drag to rearrange*
-
-![Cards View](screenshots/05-card-view.jpeg)
-*Card view — default interface, all memory files in a clean grid*
-
-![3D Heatmap](screenshots/06-3d-view.jpeg)
-*3D view — nodes glow brighter with more connections*
 
 ## Features
 
