@@ -42,6 +42,18 @@ node server.js --dir /your/claude/projects
 
 Open `http://localhost:3457` in your browser.
 
+## 2D View — Line Colors
+
+When hovering a node in the 2D directed graph:
+
+| Color | Style | Meaning |
+|-------|-------|---------|
+| 🔴 Red | Solid highlight | All edges connected to the hovered node (direction-agnostic) |
+| 🔵 Blue | Dashed `- - -` | **Outgoing** links — this node points to those |
+| 🟠 Orange | Solid | **Incoming** links — other nodes point to this one |
+
+Non-connected edges fade out on hover for clarity.
+
 ## CLI Options
 
 | Flag | Default | Description |
