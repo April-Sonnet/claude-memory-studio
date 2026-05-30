@@ -1,6 +1,6 @@
 {
   "name": "claude-mem-viz",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Claude Code 记忆可视化工具",
   "main": "server.js",
   "bin": {

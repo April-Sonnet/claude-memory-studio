@@ -110,11 +110,12 @@
 		      (function computeLayout() {
 		        const pos = {};
 		        const centerId = userNodeId || 'april-sonnet-profile'; pos[centerId] = { x:50, y:50 };
-		        const typeRingR = { user: 15, feedback: 22, project: 30, reference: 38, concept: 18 };
+		        const typeRingR = { user: 28, feedback: 22, project: 30, reference: 38, concept: 28 };
 		        const groups = {};
 		        nodes.filter(n => n.id !== (userNodeId || 'april-sonnet-profile')).forEach(n => {
-		          if (!groups[n.type]) groups[n.type] = [];
-		          groups[n.type].push(n);
+		          const displayType = (n.type === 'user') ? 'reference' : n.type;
+		          if (!groups[displayType]) groups[displayType] = [];
+		          groups[displayType].push(n);
 		        });
 		        const types = Object.keys(groups);
 		        types.forEach((type, ti) => {
@@ -670,6 +671,10 @@
     const g2Nodes = document.getElementById('g2-nodes');
 
     // Build edges SVG - deduplicate bidirectional
+    // Build reverse-edge lookup for bidirectional detection
+    const allDirEdges = new Set();
+    edges.forEach(e => allDirEdges.add(e.from + '→' + e.to));
+
     const drawnEdges = new Set();
     const edgeSvgs = [];
 
@@ -679,16 +684,21 @@
       drawnEdges.add(key);
       const pa = nodePositions2D.get(e.from), pb = nodePositions2D.get(e.to);
       if (!pa || !pb) return;
+      const dx = pb[0] - pa[0], dy = pb[1] - pa[1];
+      const len = Math.sqrt(dx*dx + dy*dy);
+      const off = Math.min(1.2, len * 0.3);
+      const bi = allDirEdges.has(e.to + '→' + e.from);
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', pa[0] + '%');
-      line.setAttribute('y1', pa[1] + '%');
-      line.setAttribute('x2', pb[0] + '%');
-      line.setAttribute('y2', pb[1] + '%');
+      line.setAttribute('x1', (pa[0] + dx/len * off) + '%');
+      line.setAttribute('y1', (pa[1] + dy/len * off) + '%');
+      line.setAttribute('x2', (pb[0] - dx/len * off) + '%');
+      line.setAttribute('y2', (pb[1] - dy/len * off) + '%');
       line.setAttribute('marker-end', 'url(#arrow-default)');
+      if (bi) line.setAttribute('marker-start', 'url(#arrow-reverse)');
       line.dataset.from = e.from;
       line.dataset.to = e.to;
       g2Svg.appendChild(line);
-      edgeSvgs.push({ el: line, from: e.from, to: e.to });
+      edgeSvgs.push({ el: line, from: e.from, to: e.to, bi });
     });
 
     // Edge lookup map for O(1) trace
@@ -743,9 +753,11 @@
       tracedNodeId = null;
       document.getElementById('trace-panel').classList.remove('visible');
       document.getElementById('trace-body').innerHTML = '';
-      edgeLookup2D.forEach(el => {
+      edgeSvgs.forEach(({ el, bi }) => {
         el.classList.remove('edge-trace', 'edge-trace-in');
         el.setAttribute('marker-end', 'url(#arrow-default)');
+        if (bi) el.setAttribute('marker-start', 'url(#arrow-reverse)');
+        else el.removeAttribute('marker-start');
       });
       nodeEls2D.forEach(el => el.classList.remove('node-trace', 'node-trace-out', 'node-trace-in'));
     }
@@ -760,11 +772,23 @@
       // Highlight edges (O(1) via lookup map)
       result.outgoing.forEach(({ from, to }) => {
         const el = edgeLookup2D.get(from + '|' + to);
-        if (el) { el.classList.add('edge-trace'); el.setAttribute('marker-end', 'url(#arrow-trace)'); }
+        if (!el) return;
+        el.classList.add('edge-trace');
+        if (el.dataset.from === from && el.dataset.to === to) {
+          el.setAttribute('marker-end', 'url(#arrow-trace)');
+        } else {
+          el.setAttribute('marker-start', 'url(#arrow-trace-reverse)');
+        }
       });
       result.incoming.forEach(({ from, to }) => {
         const el = edgeLookup2D.get(from + '|' + to);
-        if (el) { el.classList.add('edge-trace-in'); el.setAttribute('marker-end', 'url(#arrow-trace-in)'); }
+        if (!el) return;
+        el.classList.add('edge-trace-in');
+        if (el.dataset.from === from && el.dataset.to === to) {
+          el.setAttribute('marker-end', 'url(#arrow-trace-in)');
+        } else {
+          el.setAttribute('marker-start', 'url(#arrow-trace-in-reverse)');
+        }
       });
 
       // Highlight trace nodes
@@ -1067,21 +1091,29 @@
       g2Svg.innerHTML = '';
       edgeSvgs.length = 0;
       drawnEdges.clear();
+      const allDir = new Set();
+      edges.forEach(e => allDir.add(e.from + '→' + e.to));
       edges.forEach(e => {
         const key = [e.from, e.to].sort().join('|');
         if (drawnEdges.has(key)) return;
         drawnEdges.add(key);
         const pa = nodePositions2D.get(e.from), pb = nodePositions2D.get(e.to);
         if (!pa || !pb) return;
+        const dx = pb[0] - pa[0], dy = pb[1] - pa[1];
+        const len = Math.sqrt(dx*dx + dy*dy);
+        const off = Math.min(1.2, len * 0.3);
+        const bi = allDir.has(e.to + '→' + e.from);
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', pa[0] + '%');
-        line.setAttribute('y1', pa[1] + '%');
-        line.setAttribute('x2', pb[0] + '%');
-        line.setAttribute('y2', pb[1] + '%');
+        line.setAttribute('x1', (pa[0] + dx/len * off) + '%');
+        line.setAttribute('y1', (pa[1] + dy/len * off) + '%');
+        line.setAttribute('x2', (pb[0] - dx/len * off) + '%');
+        line.setAttribute('y2', (pb[1] - dy/len * off) + '%');
+        line.setAttribute('marker-end', 'url(#arrow-default)');
+        if (bi) line.setAttribute('marker-start', 'url(#arrow-reverse)');
         line.dataset.from = e.from;
         line.dataset.to = e.to;
         g2Svg.appendChild(line);
-        edgeSvgs.push({ el: line, from: e.from, to: e.to });
+        edgeSvgs.push({ el: line, from: e.from, to: e.to, bi });
       });
     }
 

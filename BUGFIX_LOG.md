@@ -30,3 +30,21 @@
 - **问题：** 多次重启导致多个 memory 服务实例同时运行，端口被占用，新实例自动递增端口，造成混淆
 - **原因：** `pkill -f "node.*server.js"` 误杀当前 shell，旧实例未清理干净
 - **修复：** 按 PID 精确杀死旧进程后再启动
+
+### 同名节点重叠（user-profile 两个球叠在一起）
+- **问题：** 2D/3D 视图中两个 `user-profile` 节点完全重叠，视觉上只看到一个
+- **原因：** 服务器 `scanMemories()` 用 `name` 字段做节点 ID，两个不同项目的文件 `name: user-profile` 撞 ID → 布局用 `pos[n.id]` 第二次覆盖第一次 → 两个 DOM 元素渲染在同一个坐标
+- **修复：** 服务器检测到重复 name 时自动追加 `@项目名` 后缀（`user-profile@test-project`），保持节点唯一性；同步更新 `findNodeFile()` 支持后缀格式的文件查找
+- **文件：** `server.js` line 133-135（去重），line 237-258（findNodeFile）
+
+### 2D 线条箭头被节点遮挡
+- **问题：** 箭头渲染在节点中心，被节点元素（z-index 更高）盖住，完全看不到方向
+- **原因：** 线条终点设在节点圆心，SVG z-index: 2 低于节点 z-index: 5
+- **修复：** 计算节点间方向向量，线条终点缩进 1.2%，箭头从节点边缘伸出
+- **文件：** `public/app.js` line 685, 1088（两处 edge 渲染）
+
+### 2D 双向连接箭头方向随机
+- **问题：** A→B 和 B→A 合并成一条线后，箭头方向由字母排序决定而非实际连接方向，双向连接只能看到一个方向的箭头
+- **原因：** `[e.from, e.to].sort().join('|')` 去重丢失方向信息
+- **修复：** 检测反向连接是否存在；双向连接添加 `marker-start` 反向箭头（两端箭头），悬停 trace 时出链入链正确使用 `marker-end`/`marker-start`，方向不互相覆盖
+- **文件：** `public/app.js`（4 处修改: 初始渲染 + rebuild2DEdges + clear2DTrace + show2DTrace），`index.html`（新增 arrow-reverse/arrow-trace-reverse/arrow-trace-in-reverse 三个 SVG marker）

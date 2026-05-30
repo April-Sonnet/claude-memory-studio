@@ -130,14 +130,16 @@ function scanMemories() {
       const bodyStart = content.indexOf('---', content.indexOf('---') + 1) + 3;
       const body = content.slice(bodyStart).trim();
 
-      const id = fmValue(parsed.lines, 'name') || file.replace(/\.md$/, '');
+      let id = fmValue(parsed.lines, 'name') || file.replace(/\.md$/, '');
+      const origName = id;
+      if (nameToIdx.has(id)) id = id + '@' + project;
       const desc = fmValue(parsed.lines, 'description') || '';
       const type = fmType(parsed.lines) || 'project';
       const links = extractLinks(body);
 
       nodes.push({
-        id, label: id, desc, type, size: 'md',
-        body, _file: filePath,
+        id, label: origName, desc, type, size: 'md',
+        body, _file: filePath, _project: project,
         isUserProfile: type === 'user' && !nodes.some(n => n.isUserProfile),
         outgoing: links, incoming: [],
       });
@@ -233,7 +235,29 @@ function parseBody(req) {
 }
 
 function findNodeFile(id) {
-  // Search all project memories for a node with this id
+  // Handle id@project format (from dedup)
+  const atIdx = id.lastIndexOf('@');
+  if (atIdx > 0) {
+    const origName = id.slice(0, atIdx);
+    const projectName = id.slice(atIdx + 1);
+    const memDir = path.join(baseDir, projectName, 'memory');
+    if (fs.existsSync(memDir)) {
+      let files;
+      try { files = fs.readdirSync(memDir); } catch(e) { files = []; }
+      for (const file of files) {
+        if (!file.endsWith('.md')) continue;
+        const fp = path.join(memDir, file);
+        try {
+          const c = fs.readFileSync(fp, 'utf-8');
+          const p = parseFrontmatter(c);
+          if (!p) continue;
+          if (fmValue(p.lines, 'name') === origName) return fp;
+        } catch(e) { continue; }
+      }
+    }
+    return null; // suffixed ID → only search that one project
+  }
+  // Unsuffixed ID: search all projects, return first match
   if (!fs.existsSync(baseDir)) return null;
   const projects = fs.readdirSync(baseDir);
   for (const project of projects) {
@@ -501,7 +525,7 @@ tryListen(port, (srv, finalPort) => {
 
   console.log('');
   console.log('  ╔═══════════════════════════════════════╗');
-  console.log('  ║        claude-mem-viz  v0.1.0         ║');
+  console.log('  ║        claude-mem-viz  v0.1.2         ║');
   console.log('  ╚═══════════════════════════════════════╝');
   console.log('');
   console.log('  Directory:   ' + baseDir);
